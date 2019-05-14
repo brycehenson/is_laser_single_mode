@@ -75,7 +75,7 @@ end
 
 if single_opts.plot.all || (single_opts.plot.failed && ~single_out.is_single_mode)
     title_strs={'Failed','OK'};
-    sfigure(1);
+    fig_handle=sfigure(1);
     clf;
     subplot(2,2,1)
     cla;
@@ -106,7 +106,7 @@ if single_opts.plot.all || (single_opts.plot.failed && ~single_out.is_single_mod
     hold off
     title(title_strs(single_out.is_single_mode+1))
     drawnow
-    refresh(1)
+    refresh(fig_handle)
 end %end plots
 
 end

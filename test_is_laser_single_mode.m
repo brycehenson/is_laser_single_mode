@@ -4,6 +4,7 @@
 pzt_noise_amp=1e-3;%1e-1;
 time_vec=linspace(0,50e-3,1e5)';
 pzt_freq=70;
+samp_freq=numel(time_vec)/diff(time_vec([1,end]));
 %TODO pzt distortions/nonlin
 pzt_voltage=30+10*sawtooth(time_vec*pzt_freq*2*pi);
 pzt_voltage=pzt_voltage+pzt_noise_amp*randn(numel(pzt_voltage),1);
