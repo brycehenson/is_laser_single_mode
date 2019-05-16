@@ -35,6 +35,7 @@ st_pts.above_mean=xdat(xing_idx)>xdat_mean;
 x2deriv=gradient(xderiv,tdat);
 %determine if these crossings they are increasing or decreasing in derivative
 st_pts.positive_curvature=x2deriv(xing_idx)>0;
+st_pts.xval=xdat(xing_idx);
 
 %optionaly compute the level crossing
 if nargout>1

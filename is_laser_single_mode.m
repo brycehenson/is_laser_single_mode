@@ -31,14 +31,26 @@ function [laser_ok,laser_sm_details]=is_laser_single_mode(in_struct)
 %      laser_sm_details [struct]
 %      laser_sm_details.failure_mode [string] 
 
+% Other m-files required: is_single_scan_sm,stfig
+% Also See: 
+% Subfunctions: 
+% MAT-files required: none
+
     
 % Known BUGS/ Possible Improvements
 %   -return error if no peaks are found
 %   -[x] adaptive determination of scan time
 %   -handle sawtooth and triangle wave
 %   -[x] adaptively handle if the peak int the pd_cmp vs pd_full is the same peak
-%   -[x] adaptive smoothing and thresholding
-%   -
+%   -[x] adaptive smoothing
+%   -[ ] adaptive peak thresholding based on num peaks to one greater than the voltage threshold
+%   -[ ] move to sampled interpolated pzt vs pd curve
+%        - allows for peak withds to be determined for adaptive pzt_peak_width
+%        - allows for min peak seperation to be specified
+%        - return finesse of cavity
+%   -[ ] document single_scan function
+%   -[ ] peak detection below single scan noise threhold
+%        - sum multiple scans together using xcorr to match up
 
 
 % Author: Bryce Henson
@@ -46,19 +58,14 @@ function [laser_ok,laser_sm_details]=is_laser_single_mode(in_struct)
 % Last revision:2019-05-07
 
 %------------- BEGIN USER VAR --------------
-%%load('is_sm_start.mat')  %DEV DEV DEV REMOVE FOR USE
-
 
 pzt_scan_freq_lims=[0.1,10e3]; %this defines the expected range of the pzt scan freqs, not very important
 scan_num_exta_facor=2;%what factor does the number of scans in the data have to exceed the requested query scans in order to just sample a subset of the scans
 cmp_multiplier_disp=NaN;
-st_pt_min_pzt_factor=1; %how big the difference between stationary points needs to be, in factors of the std of the pzt voltage
+st_pt_min_pzt_factor=0.5; %how big the difference between stationary points needs to be, in factors of the std of the pzt voltage range
 scan_clip_factor=1e-2; %remove peaks that are not further than this away from the edges, in factors of the std of the pzt voltage
+merge_cmp_full_factor=1;
 
-%in_struct.pzt_scan_period=50e-3; %DEV DEV DEV REMOVE FOR USE
-
-
-in_struct.plot.all=false ;
 
 %------------- END USER VAR --------------
 %------------- BEGIN CODE --------------
@@ -88,26 +95,30 @@ if ~isfield(in_struct,'pzt_filt_factor_deriv')
     in_struct.pzt_filt_factor_deriv=1e-3;
 end
 
-if ~isfield(in_struct,'pzt_dist_pd_cmp')
-    warning('setting pzt_dist_pd_cmp to default')
-    in_struct.pzt_dist_pd_cmp=0.1*in_struct.pzt_dist_sm;
+if ~isfield(in_struct,'pzt_peak_width')
+    warning('setting pzt_peak_width to default')
+    in_struct.pzt_peak_width=in_struct.pzt_dist_sm/200; %this will be roughly the single mode pzt spacing/finnesse
 end
 
+if ~isfield(in_struct,'verbose') || isempty(in_struct.verbose)
+    in_struct.verbose=1;
+end
 
 if ~isfield(in_struct,'peak_thresh') || isempty(in_struct.peak_thresh) || sum(isnan(in_struct.peak_thresh))~=0
-    warning('you did not specify a peak threshould we will try and guess what is should be based on the distribution of values in the pd input')
-     in_struct.peak_thresh=[];
+    warning('you did not specify a peak threshould we will try and guess what is should be based on the distribution of time series values in the pd input')
+    in_struct.peak_thresh=[];
     for ii=1:size(in_struct.pd_voltage,2)
         [f,x]=ecdf(in_struct.pd_voltage(:,ii));
         cum_fun=@(xq) interp1(x(2:end),f(2:end),xq)-0.96;
         root=fzero(cum_fun,[min(x),max(x)]); %median(in_struct.pd_voltage(:,ii))
         in_struct.peak_thresh(ii) =root;
     end
+    if  in_struct.verbose>0
+        fprintf('set pd thresholds to be %s',sprintf('%f,',in_struct.peak_thresh))
+    end
 end
 
-if ~isfield(in_struct,'verbose') || isempty(in_struct.verbose)
-    in_struct.verbose=1;
-end
+
 
 if ~isfield(in_struct,'plot') || isempty(in_struct.plot)
     in_struct.plot.all=false;
@@ -138,7 +149,7 @@ end
 % a fft of the first 10 oscillations
 if isfield(in_struct,'pzt_scan_period')
     tmax=min(in_struct.times(1)+in_struct.pzt_scan_period*10,in_struct.times(end));
-    [~,idx_max]=closest_value(in_struct.times,tmax);
+    [~,idx_max]=closest_value(in_struct.times,tmax); %or could use fast_sorted_mask
     pztfreq_subset_data=[in_struct.times(1:idx_max),in_struct.pzt_voltage(1:idx_max)];
     %clear('tmax','idx_max')
 else %otherwise we do the fft on the whole thing
@@ -149,6 +160,7 @@ end
 fft_out=fft_tx(pztfreq_subset_data(:,1),pztfreq_subset_data(:,2)-mean(pztfreq_subset_data(:,2)),'window','hanning','padding',10);
 
 pzt_scan_std=std(pztfreq_subset_data(:,2));
+pzt_scan_range=range(pztfreq_subset_data(:,2));
 
 %mask out the lowest and highest frequencies
 idxs_freq_range=fast_sorted_mask(fft_out(1,:),pzt_scan_freq_lims(1),pzt_scan_freq_lims(2));
@@ -249,11 +261,12 @@ single_opts.peak_thresh=in_struct.peak_thresh;
 single_opts.pd_filt_factor=in_struct.pd_filt_factor;
 single_opts.pzt_scan_period=pzt_scan_period;
 single_opts.pzt_filt_factor=in_struct.ptz_filt_factor_pks;
-single_opts.merge_cmp_full_pk_dist=in_struct.pzt_dist_pd_cmp;
+single_opts.merge_cmp_full_pk_dist=in_struct.pzt_peak_width*merge_cmp_full_factor;
+single_opts.merge_peaks_pzt=in_struct.pzt_peak_width*merge_cmp_full_factor;
 single_opts.pzt_dist_sm=in_struct.pzt_dist_sm;
 single_opts.pd_amp_min=in_struct.pd_amp_min;
 single_opts.plot=in_struct.plot;
-single_opts.scan_clip_pzt=scan_clip_factor*pzt_scan_std;
+single_opts.scan_clip_pzt=scan_clip_factor*pzt_scan_range; 
 single_opts.cmp_multiplier_disp=cmp_multiplier_disp;
 pk_spacing_list=[];
 
@@ -286,7 +299,7 @@ if use_subset_sample
         st_pts.value=subset.pzt(st_pts.idx);
         pzt_diff_between_st_pts=diff(st_pts.value);
         %select pairs that have a large enough difference
-        scan_mask=pzt_diff_between_st_pts>pzt_scan_std*st_pt_min_pzt_factor;
+        scan_mask=pzt_diff_between_st_pts>fundamental*st_pt_min_pzt_factor;
         if strcmp(in_struct.scan_type,'sawtooth') 
             %select the pairs of stationary points that give a differenc that is the right sign(positive if sawtooth_polarity_positive==true)
             if sawtooth_polarity_positive
@@ -319,10 +332,10 @@ else
     st_pts=stpt_and_level_xing(in_struct.times,in_struct.pzt_voltage,...
                                             in_struct.pzt_filt_factor_deriv*pzt_scan_period,nan);
                                         
-    st_pts.value=in_struct.pzt_voltage(st_pts.idx);
-    pzt_diff_between_st_pts=diff(st_pts.value);
+    %st_pts.value=in_struct.pzt_voltage(st_pts.idx);
+    pzt_diff_between_st_pts=diff(st_pts.xval);
     %select pairs that have a large enough difference
-    scan_mask=pzt_diff_between_st_pts>pzt_scan_std*st_pt_min_pzt_factor;
+    scan_mask=pzt_diff_between_st_pts>pzt_scan_range*st_pt_min_pzt_factor;
     if strcmp(in_struct.scan_type,'sawtooth') 
         %select the pairs of stationary points that give a differenc that is the right sign(positive if sawtooth_polarity_positive==true)
         if sawtooth_polarity_positive
