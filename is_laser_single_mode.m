@@ -104,6 +104,11 @@ if ~isfield(in_struct,'verbose') || isempty(in_struct.verbose)
     in_struct.verbose=1;
 end
 
+if ~isfield(in_struct,'skip_wf_check') 
+    in_struct.skip_wf_check=0;
+end
+
+
 if ~isfield(in_struct,'peak_thresh') || isempty(in_struct.peak_thresh) || sum(isnan(in_struct.peak_thresh))~=0
     warning('you did not specify a peak threshould we will try and guess what is should be based on the distribution of time series values in the pd input')
     in_struct.peak_thresh=[];
@@ -186,46 +191,48 @@ wfcheck_subset_data=[in_struct.times(1:idx_max),in_struct.pzt_voltage(1:idx_max)
 
 [st_pts,level_xing]=stpt_and_level_xing(wfcheck_subset_data(:,1),wfcheck_subset_data(:,2),...
                                             in_struct.pzt_filt_factor_deriv*pzt_scan_period,nan);
-                                     
-%check that the level xing alternates in gradient
-if ~is_alternating_logical_vec(level_xing.positive_deriv)
-    error('problem in pzt voltage data, mean crossings of pzt signal does not alternate derivative')
-end
-%and the same in curvature
-if ~is_alternating_logical_vec(st_pts.positive_curvature)
-    error('problem in pzt voltage data, stpts of pzt signal does not alternate curvature')
-end
-%check that when there is a stpt above the mean that this implies that there is a negative curvature
-if ~isequal(st_pts.above_mean,~st_pts.positive_curvature)
-     error('problem in pzt voltage data, the pzt value at a stationay point is above the mean but does not have negative curvature ')
-end
-
-
-%now lets check that there are 2 st pts for each mean xing
-%if the number of elements is odd trim by one element to take an even number
-iimax=numel(level_xing.idx);
-iimax=iimax-mod(iimax,2);
-for ii=1:iimax
-    idx_start=ii;
-    idx_end=ii+1;
-    number_of_st_pts=numel(fast_sorted_mask(st_pts.idx,idx_start,idx_end));
-    if number_of_st_pts~=2
-        error('pzt waveform has %u st pts between mean crossings',number_of_st_pts)
+     
+if  ~in_struct.skip_wf_check                                                                       
+    %check that the level xing alternates in gradient
+    if ~is_alternating_logical_vec(level_xing.positive_deriv)
+        error('problem in pzt voltage data, mean crossings of pzt signal does not alternate derivative')
     end
-end
+    %and the same in curvature
+    if ~is_alternating_logical_vec(st_pts.positive_curvature)
+        error('problem in pzt voltage data, stpts of pzt signal does not alternate curvature')
+    end
+    %check that when there is a stpt above the mean that this implies that there is a negative curvature
+    if ~isequal(st_pts.above_mean,~st_pts.positive_curvature)
+         error('problem in pzt voltage data, the pzt value at a stationay point is above the mean but does not have negative curvature ')
+    end
 
-%find how the odd and even st.pt. spacing compate
 
-stpt_time_diff=diff(st_pts.time);
-stpt_val_diff=diff(wfcheck_subset_data(st_pts.idx,2));
-stpt_even_odd_time_diff=[mean(stpt_time_diff(2:2:end)),mean(stpt_time_diff(1:2:end))];
-stpt_even_odd_val_diff=[mean(stpt_val_diff(2:2:end)),mean(stpt_val_diff(1:2:end))];
-stpt_diff_parity_ratio=max(stpt_even_odd_time_diff)/min(stpt_even_odd_time_diff);
+    %now lets check that there are 2 st pts for each mean xing
+    %if the number of elements is odd trim by one element to take an even number
+    iimax=numel(level_xing.idx);
+    iimax=iimax-mod(iimax,2);
+    for ii=1:iimax
+        idx_start=ii;
+        idx_end=ii+1;
+        number_of_st_pts=numel(fast_sorted_mask(st_pts.idx,idx_start,idx_end));
+        if number_of_st_pts~=2
+            error('pzt waveform has %u st pts between mean crossings',number_of_st_pts)
+        end
+    end
 
-if strcmp(in_struct.scan_type,'sawtooth') && stpt_diff_parity_ratio<10
-    warning('based on the timing differences between st. points of the pzt waveform you dont have a sawtooth (or the xing detection didnt work)')
-elseif ismember(in_struct.scan_type,{'triangle','sine'}) && stpt_diff_parity_ratio>5
-    warning('based on the timing differences between st. points of the pzt waveform you dont have a triangle or sine waveform (or the xing detection didnt work)')
+    %find how the odd and even st.pt. spacing compate
+
+    stpt_time_diff=diff(st_pts.time);
+    stpt_val_diff=diff(wfcheck_subset_data(st_pts.idx,2));
+    stpt_even_odd_time_diff=[mean(stpt_time_diff(2:2:end)),mean(stpt_time_diff(1:2:end))];
+    stpt_even_odd_val_diff=[mean(stpt_val_diff(2:2:end)),mean(stpt_val_diff(1:2:end))];
+    stpt_diff_parity_ratio=max(stpt_even_odd_time_diff)/min(stpt_even_odd_time_diff);
+
+    if strcmp(in_struct.scan_type,'sawtooth') && stpt_diff_parity_ratio<10
+        warning('based on the timing differences between st. points of the pzt waveform you dont have a sawtooth (or the xing detection didnt work)')
+    elseif ismember(in_struct.scan_type,{'triangle','sine'}) && stpt_diff_parity_ratio>5
+        warning('based on the timing differences between st. points of the pzt waveform you dont have a triangle or sine waveform (or the xing detection didnt work)')
+    end
 end
 
 %calculate the type of sawtooth long positive gradient or long negative gradient
