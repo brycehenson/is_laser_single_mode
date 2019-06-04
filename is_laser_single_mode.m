@@ -191,7 +191,7 @@ wfcheck_subset_data=[in_struct.times(1:idx_max),in_struct.pzt_voltage(1:idx_max)
 
 [st_pts,level_xing]=stpt_and_level_xing(wfcheck_subset_data(:,1),wfcheck_subset_data(:,2),...
                                             in_struct.pzt_filt_factor_deriv*pzt_scan_period,nan);
-     
+
 if  ~in_struct.skip_wf_check                                                                       
     %check that the level xing alternates in gradient
     if ~is_alternating_logical_vec(level_xing.positive_deriv)
@@ -205,8 +205,7 @@ if  ~in_struct.skip_wf_check
     if ~isequal(st_pts.above_mean,~st_pts.positive_curvature)
          error('problem in pzt voltage data, the pzt value at a stationay point is above the mean but does not have negative curvature ')
     end
-
-
+end
     %now lets check that there are 2 st pts for each mean xing
     %if the number of elements is odd trim by one element to take an even number
     iimax=numel(level_xing.idx);
@@ -219,7 +218,7 @@ if  ~in_struct.skip_wf_check
             error('pzt waveform has %u st pts between mean crossings',number_of_st_pts)
         end
     end
-
+    
     %find how the odd and even st.pt. spacing compate
 
     stpt_time_diff=diff(st_pts.time);
@@ -233,7 +232,7 @@ if  ~in_struct.skip_wf_check
     elseif ismember(in_struct.scan_type,{'triangle','sine'}) && stpt_diff_parity_ratio>5
         warning('based on the timing differences between st. points of the pzt waveform you dont have a triangle or sine waveform (or the xing detection didnt work)')
     end
-end
+
 
 %calculate the type of sawtooth long positive gradient or long negative gradient
 if strcmp(in_struct.scan_type,'sawtooth') 
