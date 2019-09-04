@@ -152,6 +152,11 @@ end
 % plot(in_struct.times,in_struct.pzt_voltage)
 % if the pzt_scan_period has been specified take it as a guess and then we can take the precise answer using
 % a fft of the first 10 oscillations
+
+%TODO: use dominant_freq_components
+% make faster as not that important, just used to set smoothing time
+% make optional
+
 if isfield(in_struct,'pzt_scan_period')
     tmax=min(in_struct.times(1)+in_struct.pzt_scan_period*10,in_struct.times(end));
     [~,idx_max]=closest_value(in_struct.times,tmax); %or could use fast_sorted_mask

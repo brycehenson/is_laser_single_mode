@@ -28,7 +28,7 @@ ptz_voltage_filt=gaussfilt(single_opts.time,pzt_voltage,...
     single_opts.pzt_filt_factor*single_opts.pzt_scan_period);
 
 
-%need to find peaks in time,pd space bc in pzt,pd space bc the pzt is not guaranteed to be strictly increasing
+%need to find peaks in (time,pd) space bc in (pzt,pd) space bc the pzt is not guaranteed to be strictly increasing
 %to prevent having to do [v, idx] = closest_value(single_opts.time, pks_time) we just use the single input peak finder
 % this cuts out a number of fairly usefull design options such as 'MinPeakDistance' in future may want to consider using
 % interp1 to produce produce a new dataset with resampled photodiode values from an ideal peizo ramp
