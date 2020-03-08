@@ -1,5 +1,5 @@
 # <img src="figs/logo.png" alt="analyse a scanning fabry perot data to determine if a laser is single mode" width="400"/> 
-**Bryce M. Henson**  
+**[Bryce M. Henson](https://github.com/brycehenson)**  
 Use a data from a scanning fabry perot interferometer to determine if a laser is single mode.
  
 **Status:** This Code is **NOT** ready for use in other projects. Testing is **NOT** implemented or passing.  
