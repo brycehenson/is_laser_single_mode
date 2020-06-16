@@ -105,7 +105,7 @@ if ~isfield(in_struct,'verbose') || isempty(in_struct.verbose)
 end
 
 if ~isfield(in_struct,'skip_wf_check') 
-    in_struct.skip_wf_check=0;
+    in_struct.skip_wf_check=false;
 end
 
 
@@ -328,6 +328,7 @@ if use_subset_sample
         single_opts.pd_voltage=subset.pd(seg_start_idx:seg_stop_idx,:);
         single_opts.time=subset.time(seg_start_idx:seg_stop_idx);
         single_opts.pzt_voltage=subset.pzt(seg_start_idx:seg_stop_idx);
+        
         scans{ii}=is_single_scan_sm(single_opts);
         scans{ii}.start_idx=seg_start_idx;
         scans{ii}.stop_idx=seg_stop_idx;
@@ -362,7 +363,9 @@ else
 
     %trim extra components in the start index
     seg_start_idx=seg_start_idx(1:numel(seg_stop_idx)); 
-    if ~isequal(size(seg_start_idx),size(seg_stop_idx)), error('runtime error start stop idx vec for segment not the same size'), end
+    if ~isequal(size(seg_start_idx),size(seg_stop_idx)) 
+        error('runtime error start stop idx vec for segment not the same size')
+    end
     
     %some plots for debuging
 %     figure(1)

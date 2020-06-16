@@ -113,8 +113,8 @@ if single_opts.plot.all || (single_opts.plot.failed && ~single_out.is_single_mod
         plot(ptz_voltage_filt,pd_dat_cmp_filt*single_opts.cmp_multiplier_disp,'k')
         plot(single_out.pks.cmp.pzt,single_out.pks.cmp.pd*single_opts.cmp_multiplier_disp,'rx','markersize',20);
         legend_elm={'pd raw','pd filt','pd peaks',...
-            sprintf('comp. pd raw ×%u',single_opts.cmp_multiplier_disp),...
-            sprintf('comp. pd filt ×%u',single_opts.cmp_multiplier_disp)};
+            sprintf('comp. pd raw $\\times$%u',single_opts.cmp_multiplier_disp),...
+            sprintf('comp. pd filt $\\times$%u',single_opts.cmp_multiplier_disp)};
         if numel(single_out.pks.cmp.pzt)>0
             legend_elm=cat(2,legend_elm, 'comp. pd peaks') ;
         end
