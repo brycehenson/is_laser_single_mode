@@ -196,7 +196,24 @@ wfcheck_subset_data=[in_struct.times(1:idx_max),in_struct.pzt_voltage(1:idx_max)
 
 [st_pts,level_xing]=stpt_and_level_xing(wfcheck_subset_data(:,1),wfcheck_subset_data(:,2),...
                                             in_struct.pzt_filt_factor_deriv*pzt_scan_period,nan);
+%% plot for pzt diagnostics
 
+% stfig('pzt diagnostic')
+% clf
+% plot(wfcheck_subset_data(:,1),wfcheck_subset_data(:,2))
+% xlabel('time (s)')
+% ylabel('pzt voltage')
+% 
+% hold on
+% mask=st_pts.positive_curvature;
+% plot(st_pts.time(mask), st_pts.xval(mask),'x')
+% mask=~st_pts.positive_curvature;
+% plot(st_pts.time(mask), st_pts.xval(mask),'o')
+% hold off
+
+%%
+                                        
+                                        
 if  ~in_struct.skip_wf_check                                                                       
     %check that the level xing alternates in gradient
     if ~is_alternating_logical_vec(level_xing.positive_deriv)
@@ -232,7 +249,7 @@ end
     stpt_even_odd_val_diff=[mean(stpt_val_diff(2:2:end)),mean(stpt_val_diff(1:2:end))];
     stpt_diff_parity_ratio=max(stpt_even_odd_time_diff)/min(stpt_even_odd_time_diff);
 
-    if strcmp(in_struct.scan_type,'sawtooth') && stpt_diff_parity_ratio<10
+    if strcmp(in_struct.scan_type,'sawtooth') && stpt_diff_parity_ratio<5
         warning('based on the timing differences between st. points of the pzt waveform you dont have a sawtooth (or the xing detection didnt work)')
     elseif ismember(in_struct.scan_type,{'triangle','sine'}) && stpt_diff_parity_ratio>5
         warning('based on the timing differences between st. points of the pzt waveform you dont have a triangle or sine waveform (or the xing detection didnt work)')
